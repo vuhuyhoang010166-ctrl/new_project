@@ -53,7 +53,7 @@ def get_project_data_from_ai(text, api_key):
     try:
         genai.configure(api_key=api_key)
         # *** ĐÃ SỬA: Sử dụng model name chính xác với version cụ thể ***
-        model = genai.GenerativeModel('gemini-1.5-flash-002')
+        model = genai.GenerativeModel('gemini-2.5-flash-002')
 
         # Prompt được thiết kế kỹ lưỡng để yêu cầu AI trả về định dạng JSON,
         # giúp việc xử lý dữ liệu trở nên đáng tin cậy hơn.
@@ -188,7 +188,7 @@ def get_ai_analysis(metrics, api_key):
     try:
         genai.configure(api_key=api_key)
         # *** ĐÃ SỬA: Sử dụng model name chính xác với version cụ thể ***
-        model = genai.GenerativeModel('gemini-1.5-flash-002')
+        model = genai.GenerativeModel('gemini-2.5-flash')
 
         prompt = f"""
         Với vai trò là một chuyên gia tư vấn đầu tư, hãy phân tích các chỉ số hiệu quả dự án dưới đây và đưa ra nhận định chuyên môn.
