@@ -25,7 +25,6 @@ st.title("💼 Trình Phân Tích Phương Án Kinh Doanh AI")
 st.caption("Tải lên phương án kinh doanh dưới dạng file Word (.docx) để AI phân tích và đánh giá.")
 
 # --- KHỞI TẠO BIẾN TRẠNG THÁI (SESSION STATE) ---
-# Rất quan trọng để lưu trữ dữ liệu giữa các lần chạy lại của script
 if 'project_data' not in st.session_state:
     st.session_state.project_data = None
 if 'cash_flow_df' not in st.session_state:
@@ -34,29 +33,20 @@ if 'metrics' not in st.session_state:
     st.session_state.metrics = None
 if 'analysis_requested' not in st.session_state:
     st.session_state.analysis_requested = False
-
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
 # --- HÀM HỖ TRỢ ---
 
 def extract_text_from_docx(uploaded_file):
-    """Đọc và trích xuất toàn bộ văn bản từ file .docx."""
-    # Sử dụng BytesIO để đọc file từ bộ nhớ mà không cần lưu xuống đĩa
     document = Document(io.BytesIO(uploaded_file.read()))
     full_text = [para.text for para in document.paragraphs]
     return '\n'.join(full_text)
 
 def get_project_data_from_ai(text, api_key):
-    """
-    Sử dụng Gemini AI để trích xuất các thông số tài chính từ văn bản.
-    Trả về một dictionary Python.
-    """
     try:
         genai.configure(api_key=api_key)
-        # *** ĐÃ SỬA: Sử dụng model name chính xác với version cụ thể ***
         model = genai.GenerativeModel('gemini-2.5-flash')
-
-        # Prompt được thiết kế kỹ lưỡng để yêu cầu AI trả về định dạng JSON,
-        # giúp việc xử lý dữ liệu trở nên đáng tin cậy hơn.
         prompt = f"""
         Bạn là một chuyên gia phân tích tài chính. Hãy đọc kỹ văn bản phương án kinh doanh dưới đây.
         Trích xuất chính xác các thông tin sau và trả về dưới dạng một đối tượng JSON duy nhất.
@@ -86,10 +76,8 @@ def get_project_data_from_ai(text, api_key):
         }}
         """
         response = model.generate_content(prompt)
-        # Loại bỏ các ký tự không cần thiết mà AI có thể thêm vào
         cleaned_response = response.text.strip().replace('```json', '').replace('```', '')
         return json.loads(cleaned_response)
-
     except Exception as e:
         st.error(f"Lỗi khi gọi API của AI: {e}")
         st.error(f"Phản hồi nhận được từ AI: {response.text if 'response' in locals() else 'Không có phản hồi'}")
@@ -97,12 +85,7 @@ def get_project_data_from_ai(text, api_key):
 
 @st.cache_data
 def calculate_financials(project_data):
-    """
-    Xây dựng bảng dòng tiền và tính toán các chỉ số tài chính.
-    Sử dụng @st.cache_data để không phải tính toán lại nếu đầu vào không đổi.
-    """
     try:
-        # Lấy dữ liệu và chuyển đổi sang đúng định dạng
         investment = float(project_data['von_dau_tu'])
         lifespan = int(project_data['dong_doi_du_an'])
         revenue = float(project_data['doanh_thu_nam'])
@@ -110,21 +93,17 @@ def calculate_financials(project_data):
         wacc = float(project_data['wacc']) / 100.0
         tax_rate = float(project_data['thue_suat']) / 100.0
 
-        # --- Xây dựng bảng dòng tiền ---
         years = list(range(lifespan + 1))
         profit_before_tax = [0] * (lifespan + 1)
         tax = [0] * (lifespan + 1)
         profit_after_tax = [0] * (lifespan + 1)
         net_cash_flow = [0] * (lifespan + 1)
 
-        net_cash_flow[0] = -investment  # Dòng tiền năm 0 là vốn đầu tư
-
+        net_cash_flow[0] = -investment
         for year in range(1, lifespan + 1):
             profit_before_tax[year] = revenue - costs
             tax[year] = profit_before_tax[year] * tax_rate if profit_before_tax[year] > 0 else 0
             profit_after_tax[year] = profit_before_tax[year] - tax[year]
-            # Giả định đơn giản: Dòng tiền thuần = Lợi nhuận sau thuế
-            # (Trong thực tế có thể cộng lại khấu hao)
             net_cash_flow[year] = profit_after_tax[year]
 
         cash_flow_df = pd.DataFrame({
@@ -137,30 +116,20 @@ def calculate_financials(project_data):
             "Dòng tiền thuần (NCF)": net_cash_flow
         })
 
-        # --- Tính toán các chỉ số ---
-        # NPV (Giá trị hiện tại ròng)
         npv = npf.npv(wacc, net_cash_flow)
-
-        # IRR (Tỷ suất hoàn vốn nội bộ)
         try:
             irr = npf.irr(net_cash_flow) * 100
         except:
-            irr = "Không thể tính" # Xảy ra khi dòng tiền không đổi dấu
-
-        # PP (Thời gian hoàn vốn)
+            irr = "Không thể tính"
         cumulative_cash_flow = cash_flow_df['Dòng tiền thuần (NCF)'].cumsum()
         try:
-            # Năm trước khi hoàn vốn
             last_negative_year = cumulative_cash_flow[cumulative_cash_flow < 0].idxmax()
-            # Số tiền cần bù đắp ở năm hoàn vốn
             recovery_needed = -cumulative_cash_flow.iloc[last_negative_year]
-            # Dòng tiền của năm hoàn vốn
             cash_flow_recovery_year = cash_flow_df['Dòng tiền thuần (NCF)'].iloc[last_negative_year + 1]
             pp = last_negative_year + (recovery_needed / cash_flow_recovery_year)
         except:
             pp = "Không hoàn vốn"
 
-        # DPP (Thời gian hoàn vốn có chiết khấu)
         cash_flow_df['Dòng tiền chiết khấu'] = [ncf / ((1 + wacc)**year) for year, ncf in enumerate(net_cash_flow)]
         cash_flow_df['Dòng tiền chiết khấu lũy kế'] = cash_flow_df['Dòng tiền chiết khấu'].cumsum()
         try:
@@ -184,12 +153,9 @@ def calculate_financials(project_data):
         return None, None
 
 def get_ai_analysis(metrics, api_key):
-    """Gửi các chỉ số đã tính toán để AI đưa ra phân tích chuyên sâu."""
     try:
         genai.configure(api_key=api_key)
-        # *** ĐÃ SỬA: Sử dụng model name chính xác với version cụ thể ***
         model = genai.GenerativeModel('gemini-2.5-flash')
-
         prompt = f"""
         Với vai trò là một chuyên gia tư vấn đầu tư, hãy phân tích các chỉ số hiệu quả dự án dưới đây và đưa ra nhận định chuyên môn.
         Giải thích ngắn gọn ý nghĩa của từng chỉ số trong bối cảnh của dự án này.
@@ -209,47 +175,60 @@ def get_ai_analysis(metrics, api_key):
         st.error(f"Lỗi khi gọi API của AI để phân tích: {e}")
         return "Không thể nhận được phân tích từ AI."
 
+# ------ HÀM CHAT VỚI AI ------
+def chat_with_ai(user_message, project_data, metrics, api_key):
+    """
+    Gửi tin nhắn chat của người dùng đến AI. Câu trả lời ngắn gọn, thân thiện.
+    Nếu đã có dữ liệu dự án và chỉ số, sẽ đính kèm vào prompt cho AI.
+    """
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        context = ""
+        if project_data:
+            context += f"Các thông tin về dự án: {json.dumps(project_data, ensure_ascii=False)}.\n"
+        if metrics:
+            context += f"Các chỉ số hiệu quả dự án: {json.dumps(metrics, ensure_ascii=False)}.\n"
+        prompt = f"""
+        Bạn là trợ lý AI thân thiện, trả lời ngắn gọn, dễ hiểu và nhiệt tình cho câu hỏi sau về phương án kinh doanh hoặc các chỉ số tài chính.
+        {context}
+        Câu hỏi của người dùng: {user_message}
+        """
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        return f"Lỗi khi gọi AI: {e}"
+
 # --- GIAO DIỆN NGƯỜI DÙNG ---
 
-# Cột bên trái cho việc nhập liệu, cột bên phải cho API Key
 col1, col2 = st.columns([3, 1])
-
 with col1:
     uploaded_file = st.file_uploader(
         "1. Tải lên file phương án kinh doanh (.docx)",
         type=['docx']
     )
-
 with col2:
-    # Lấy API Key từ Streamlit Secrets
     try:
         api_key = st.secrets["GEMINI_API_KEY"]
         st.success("Đã tìm thấy API Key.", icon="🔑")
     except:
         api_key = st.text_input("Hoặc nhập Gemini API Key của bạn vào đây:", type="password")
 
-
 if uploaded_file is not None and api_key:
-    # --- BƯỚC 1: TRÍCH XUẤT DỮ LIỆU ---
     st.markdown("---")
     st.subheader("Bước 1: Trích xuất thông tin bằng AI")
 
     if st.button("Lọc dữ liệu từ file Word", type="primary"):
         with st.spinner("AI đang đọc và phân tích file... Vui lòng chờ trong giây lát..."):
-            # Trích xuất văn bản từ file
             document_text = extract_text_from_docx(uploaded_file)
-            # Gọi AI để lấy dữ liệu có cấu trúc
             st.session_state.project_data = get_project_data_from_ai(document_text, api_key)
-            # Đặt lại các kết quả cũ
             st.session_state.cash_flow_df = None
             st.session_state.metrics = None
             st.session_state.analysis_requested = False
 
-
     if st.session_state.project_data:
         st.success("✅ AI đã trích xuất thành công dữ liệu!")
         with st.expander("Xem dữ liệu AI đã lọc", expanded=True):
-            # Hiển thị dữ liệu đã trích xuất dưới dạng các metric để dễ nhìn hơn
             p_data = st.session_state.project_data
             metric_col1, metric_col2, metric_col3 = st.columns(3)
             with metric_col1:
@@ -262,9 +241,7 @@ if uploaded_file is not None and api_key:
                 st.metric(label="WACC", value=f"{p_data.get('wacc', 0)} %")
                 st.metric(label="Thuế suất TNDN", value=f"{p_data.get('thue_suat', 0)} %")
 
-        # --- BƯỚC 2 & 3: TÍNH TOÁN VÀ HIỂN THỊ KẾT QUẢ ---
         st.markdown("---")
-        # Thực hiện tính toán ngay sau khi có dữ liệu
         if st.session_state.cash_flow_df is None and st.session_state.metrics is None:
             with st.spinner("Đang xây dựng bảng dòng tiền và tính toán các chỉ số..."):
                 df, metrics_data = calculate_financials(st.session_state.project_data)
@@ -274,7 +251,6 @@ if uploaded_file is not None and api_key:
 
         if st.session_state.cash_flow_df is not None:
             st.subheader("Bước 2: Bảng Dòng Tiền Dự Án")
-            # Định dạng các cột số cho dễ đọc
             st.dataframe(st.session_state.cash_flow_df.style.format({
                 'Doanh thu': '{:,.0f}',
                 'Chi phí': '{:,.0f}',
@@ -299,7 +275,6 @@ if uploaded_file is not None and api_key:
             with indicator_cols[3]:
                 st.metric(label="Thời gian hoàn vốn có chiết khấu (DPP)", value=f"{m['DPP']:.2f} năm" if isinstance(m['DPP'], float) else m['DPP'])
 
-            # --- BƯỚC 4: PHÂN TÍCH TỪ AI ---
             st.markdown("---")
             st.subheader("Bước 4: Yêu cầu AI Phân Tích Chuyên Sâu")
             if st.button("Phân tích các chỉ số hiệu quả", type="primary"):
@@ -310,5 +285,22 @@ if uploaded_file is not None and api_key:
                     analysis_result = get_ai_analysis(st.session_state.metrics, api_key)
                     st.markdown("#### 📝 **Nhận định từ Chuyên gia AI**")
                     st.info(analysis_result)
+
+            # --------- BỔ SUNG CHỨC NĂNG CHAT VỚI AI ----------
+            st.markdown("---")
+            st.subheader("💬 Chat với AI về dự án này")
+            chat_input = st.text_input("Nhập câu hỏi cho AI (ví dụ: 'Dự án này có rủi ro gì?', 'NPV là gì?', ...)")
+
+            if chat_input:
+                with st.spinner("AI đang trả lời..."):
+                    ai_response = chat_with_ai(chat_input, st.session_state.project_data, st.session_state.metrics, api_key)
+                    st.session_state.chat_history.append({"user": chat_input, "ai": ai_response})
+
+            # Hiển thị lịch sử chat
+            if st.session_state.chat_history:
+                for chat in st.session_state.chat_history[::-1]:
+                    st.markdown(f"**Bạn:** {chat['user']}")
+                    st.markdown(f"> **AI:** {chat['ai']}")
+
 else:
     st.info("Vui lòng tải lên file .docx và đảm bảo đã cung cấp API Key để bắt đầu.")
