@@ -3,4 +3,4 @@ pandas
 numpy-financial
 google-generativeai
 python-docx
-
+plotly
