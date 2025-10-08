@@ -53,7 +53,7 @@ def get_project_data_from_ai(text, api_key):
     try:
         genai.configure(api_key=api_key)
         # *** ĐÃ SỬA: Sử dụng model name chính xác với version cụ thể ***
-        model = genai.GenerativeModel('gemini-2.5-flash-002')
+        model = genai.GenerativeModel('gemini-2.5-flash')
 
         # Prompt được thiết kế kỹ lưỡng để yêu cầu AI trả về định dạng JSON,
         # giúp việc xử lý dữ liệu trở nên đáng tin cậy hơn.
