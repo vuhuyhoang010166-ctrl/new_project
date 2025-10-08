@@ -1,6 +1,19 @@
-streamlit
-pandas
-numpy-financial
-google-generativeai
-python-docx
-plotly
+# === CORE DEPENDENCIES ===
+streamlit>=1.31.0
+pandas>=2.0.0
+numpy>=1.24.0
+
+# === FINANCIAL CALCULATIONS ===
+numpy-financial>=1.0.0
+
+# === AI & NLP ===
+google-generativeai>=0.3.0
+
+# === DOCUMENT PROCESSING ===
+python-docx>=1.1.0
+
+# === VISUALIZATION ===
+plotly>=5.18.0
+
+# === OPTIONAL: For better error handling ===
+# pydantic>=2.0.0
