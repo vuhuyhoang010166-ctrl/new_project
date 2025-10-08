@@ -16,12 +16,12 @@ import io
 
 # --- Cấu hình Trang và Tiêu đề ---
 st.set_page_config(
-    page_title="Trình Phân Tích Phương Án Kinh Doanh",
+    page_title="ABC Trình Phân Tích Phương Án Kinh Doanh",
     page_icon="💼",
     layout="wide"
 )
 
-st.title("💼 Trình Phân Tích Phương Án Kinh Doanh AI")
+st.title("💼 ABC Trình Phân Tích Phương Án Kinh Doanh AI")
 st.caption("Tải lên phương án kinh doanh dưới dạng file Word (.docx) để AI phân tích và đánh giá.")
 
 # --- KHỞI TẠO BIẾN TRẠNG THÁI (SESSION STATE) ---
