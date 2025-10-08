@@ -1,14 +1,6 @@
-# Thư viện chính để xây dựng giao diện ứng dụng web
 streamlit
-
-# Thư viện xử lý và phân tích dữ liệu, chủ yếu dùng cho DataFrame
 pandas
-
-# Thư viện chuyên dụng cho các hàm tính toán tài chính như NPV, IRR
 numpy-financial
-
-# Thư viện chính thức của Google để tương tác với Gemini AI
 google-generativeai
-
-# Thư viện để đọc nội dung từ file Microsoft Word (.docx)
 python-docx
+
