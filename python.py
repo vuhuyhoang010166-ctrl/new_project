@@ -16,12 +16,12 @@ import io
 
 # --- Cấu hình Trang và Tiêu đề ---
 st.set_page_config(
-    page_title="ABC Trình Phân Tích Phương Án Kinh Doanh",
+    page_title="Trình Phân Tích Phương Án Kinh Doanh",
     page_icon="💼",
     layout="wide"
 )
 
-st.title("💼 ABC Trình Phân Tích Phương Án Kinh Doanh AI")
+st.title("💼 Trình Phân Tích Phương Án Kinh Doanh AI")
 st.caption("Tải lên phương án kinh doanh dưới dạng file Word (.docx) để AI phân tích và đánh giá.")
 
 # --- KHỞI TẠO BIẾN TRẠNG THÁI (SESSION STATE) ---
@@ -52,8 +52,8 @@ def get_project_data_from_ai(text, api_key):
     """
     try:
         genai.configure(api_key=api_key)
-        # *** ĐÃ SỬA: Thay đổi từ 'gemini-1.5-flash-latest' sang 'gemini-1.5-flash' ***
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # *** ĐÃ SỬA: Sử dụng model name chính xác với version cụ thể ***
+        model = genai.GenerativeModel('gemini-1.5-flash-002')
 
         # Prompt được thiết kế kỹ lưỡng để yêu cầu AI trả về định dạng JSON,
         # giúp việc xử lý dữ liệu trở nên đáng tin cậy hơn.
@@ -187,8 +187,8 @@ def get_ai_analysis(metrics, api_key):
     """Gửi các chỉ số đã tính toán để AI đưa ra phân tích chuyên sâu."""
     try:
         genai.configure(api_key=api_key)
-        # *** ĐÃ SỬA: Thay đổi từ 'gemini-1.5-flash-latest' sang 'gemini-1.5-flash' ***
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # *** ĐÃ SỬA: Sử dụng model name chính xác với version cụ thể ***
+        model = genai.GenerativeModel('gemini-1.5-flash-002')
 
         prompt = f"""
         Với vai trò là một chuyên gia tư vấn đầu tư, hãy phân tích các chỉ số hiệu quả dự án dưới đây và đưa ra nhận định chuyên môn.
