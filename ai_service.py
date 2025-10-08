@@ -5,6 +5,7 @@ Module quản lý các API calls tới Gemini AI
 
 import google.generativeai as genai
 import streamlit as st
+import time
 from typing import Dict, Any, Optional, Tuple
 from config import (
     GEMINI_MODEL_NAME,
@@ -53,27 +54,44 @@ class GeminiAIService:
         if not text or not text.strip():
             return False, None, "Văn bản trống"
 
-        try:
-            prompt = EXTRACTION_PROMPT_TEMPLATE.format(text=text)
-            response = _self.model.generate_content(prompt)
+        max_retries = 3
+        retry_delay = 2  # seconds
 
-            if not response or not response.text:
-                return False, None, "AI không trả về phản hồi"
+        for attempt in range(max_retries):
+            try:
+                prompt = EXTRACTION_PROMPT_TEMPLATE.format(text=text)
+                response = _self.model.generate_content(prompt)
 
-            # Validate JSON response
-            is_valid, data, error_msg = DataValidator.validate_json_response(response.text)
+                if not response or not response.text:
+                    return False, None, "AI không trả về phản hồi"
 
-            if not is_valid:
+                # Validate JSON response
+                is_valid, data, error_msg = DataValidator.validate_json_response(response.text)
+
+                if not is_valid:
+                    return False, None, error_msg
+
+                # Sanitize dữ liệu
+                sanitized_data = DataValidator.sanitize_project_data(data)
+
+                return True, sanitized_data, ""
+
+            except Exception as e:
+                error_str = str(e)
+
+                # Check if it's a rate limit error (429)
+                if "429" in error_str or "quota" in error_str.lower() or "rate limit" in error_str.lower():
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_delay * (attempt + 1))  # Exponential backoff
+                        continue
+                    else:
+                        return False, None, "⚠️ Đã vượt quá giới hạn API của Google Gemini. Vui lòng:\n1. Đợi vài phút rồi thử lại\n2. Kiểm tra quota tại: https://aistudio.google.com/app/apikey\n3. Nâng cấp gói API nếu cần thiết"
+
+                # Other errors
+                error_msg = ERROR_MESSAGES["api_error"].format(error_str)
                 return False, None, error_msg
 
-            # Sanitize dữ liệu
-            sanitized_data = DataValidator.sanitize_project_data(data)
-
-            return True, sanitized_data, ""
-
-        except Exception as e:
-            error_msg = ERROR_MESSAGES["api_error"].format(str(e))
-            return False, None, error_msg
+        return False, None, "Không thể kết nối đến API sau nhiều lần thử"
 
     @st.cache_data(show_spinner=False, ttl=3600)
     def analyze_metrics(_self, metrics: Dict[str, Any], project_data: Dict[str, Any]) -> Tuple[bool, str, str]:
@@ -88,44 +106,61 @@ class GeminiAIService:
         Returns:
             Tuple[bool, str, str]: (success, analysis_text, error_message)
         """
-        try:
-            # Format các giá trị cho prompt - Metrics
-            npv = f"{metrics['NPV']:,.0f}"
-            irr = f"{metrics['IRR']:.2f}%" if isinstance(metrics['IRR'], float) else metrics['IRR']
-            pp = f"{metrics['PP']:.2f} năm" if isinstance(metrics['PP'], float) else metrics['PP']
-            dpp = f"{metrics['DPP']:.2f} năm" if isinstance(metrics['DPP'], float) else metrics['DPP']
+        max_retries = 3
+        retry_delay = 2  # seconds
 
-            # Format các giá trị cho prompt - Project Data
-            von_dau_tu = f"{project_data.get('von_dau_tu', 0):,.0f}"
-            dong_doi = f"{project_data.get('dong_doi_du_an', 0)}"
-            doanh_thu = f"{project_data.get('doanh_thu_nam', 0):,.0f}"
-            chi_phi = f"{project_data.get('chi_phi_nam', 0):,.0f}"
-            wacc = f"{project_data.get('wacc', 0):.2f}"
-            thue_suat = f"{project_data.get('thue_suat', 0):.2f}"
+        for attempt in range(max_retries):
+            try:
+                # Format các giá trị cho prompt - Metrics
+                npv = f"{metrics['NPV']:,.0f}"
+                irr = f"{metrics['IRR']:.2f}%" if isinstance(metrics['IRR'], float) else metrics['IRR']
+                pp = f"{metrics['PP']:.2f} năm" if isinstance(metrics['PP'], float) else metrics['PP']
+                dpp = f"{metrics['DPP']:.2f} năm" if isinstance(metrics['DPP'], float) else metrics['DPP']
 
-            prompt = ANALYSIS_PROMPT_TEMPLATE.format(
-                von_dau_tu=von_dau_tu,
-                dong_doi=dong_doi,
-                doanh_thu=doanh_thu,
-                chi_phi=chi_phi,
-                wacc=wacc,
-                thue_suat=thue_suat,
-                npv=npv,
-                irr=irr,
-                pp=pp,
-                dpp=dpp
-            )
+                # Format các giá trị cho prompt - Project Data
+                von_dau_tu = f"{project_data.get('von_dau_tu', 0):,.0f}"
+                dong_doi = f"{project_data.get('dong_doi_du_an', 0)}"
+                doanh_thu = f"{project_data.get('doanh_thu_nam', 0):,.0f}"
+                chi_phi = f"{project_data.get('chi_phi_nam', 0):,.0f}"
+                wacc = f"{project_data.get('wacc', 0):.2f}"
+                thue_suat = f"{project_data.get('thue_suat', 0):.2f}"
 
-            response = _self.model.generate_content(prompt)
+                prompt = ANALYSIS_PROMPT_TEMPLATE.format(
+                    von_dau_tu=von_dau_tu,
+                    dong_doi=dong_doi,
+                    doanh_thu=doanh_thu,
+                    chi_phi=chi_phi,
+                    wacc=wacc,
+                    thue_suat=thue_suat,
+                    npv=npv,
+                    irr=irr,
+                    pp=pp,
+                    dpp=dpp
+                )
 
-            if not response or not response.text:
-                return False, "", "AI không trả về phản hồi"
+                response = _self.model.generate_content(prompt)
 
-            return True, response.text, ""
+                if not response or not response.text:
+                    return False, "", "AI không trả về phản hồi"
 
-        except Exception as e:
-            error_msg = ERROR_MESSAGES["api_error"].format(str(e))
-            return False, "", error_msg
+                return True, response.text, ""
+
+            except Exception as e:
+                error_str = str(e)
+
+                # Check if it's a rate limit error (429)
+                if "429" in error_str or "quota" in error_str.lower() or "rate limit" in error_str.lower():
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_delay * (attempt + 1))  # Exponential backoff
+                        continue
+                    else:
+                        return False, "", "⚠️ Đã vượt quá giới hạn API của Google Gemini. Vui lòng:\n1. Đợi vài phút rồi thử lại\n2. Kiểm tra quota tại: https://aistudio.google.com/app/apikey\n3. Nâng cấp gói API nếu cần thiết"
+
+                # Other errors
+                error_msg = ERROR_MESSAGES["api_error"].format(error_str)
+                return False, "", error_msg
+
+        return False, "", "Không thể kết nối đến API sau nhiều lần thử"
 
 
 def get_ai_service(api_key: str) -> Optional[GeminiAIService]:
