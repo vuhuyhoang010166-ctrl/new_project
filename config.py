@@ -54,15 +54,29 @@ Ví dụ định dạng đầu ra:
 
 # === ANALYSIS PROMPT ===
 ANALYSIS_PROMPT_TEMPLATE = """
-Với vai trò là một chuyên gia tư vấn đầu tư, hãy phân tích các chỉ số hiệu quả dự án dưới đây và đưa ra nhận định chuyên môn.
-Giải thích ngắn gọn ý nghĩa của từng chỉ số trong bối cảnh của dự án này.
-Cuối cùng, đưa ra một kết luận tổng quan về tính khả thi của dự án (ví dụ: rất khả thi, cần cân nhắc, rủi ro cao...).
+Với vai trò là một chuyên gia tư vấn đầu tư, hãy phân tích dự án kinh doanh dưới đây dựa trên các thông tin và chỉ số tài chính.
+Đưa ra nhận định chuyên môn về tính khả thi của dự án.
 
-Các chỉ số cần phân tích:
+**THÔNG TIN DỰ ÁN:**
+- Vốn đầu tư ban đầu: {von_dau_tu} VNĐ
+- Thời gian hoạt động: {dong_doi} năm
+- Doanh thu dự kiến/năm: {doanh_thu} VNĐ
+- Chi phí vận hành/năm: {chi_phi} VNĐ
+- Chi phí sử dụng vốn (WACC): {wacc}%
+- Thuế suất: {thue_suat}%
+
+**CÁC CHỈ SỐ HIỆU QUẢ:**
 - Giá trị hiện tại ròng (NPV): {npv} VNĐ
 - Tỷ suất hoàn vốn nội bộ (IRR): {irr}
 - Thời gian hoàn vốn (PP): {pp}
 - Thời gian hoàn vốn có chiết khấu (DPP): {dpp}
+
+**YÊU CẦU PHÂN TÍCH:**
+1. Đánh giá từng chỉ số tài chính (NPV, IRR, PP, DPP) trong bối cảnh dự án này
+2. So sánh IRR với WACC để đánh giá hiệu quả đầu tư
+3. Phân tích khả năng sinh lời dựa trên doanh thu và chi phí
+4. Đưa ra kết luận tổng quan về tính khả thi (rất khả thi / khả thi / cần cân nhắc / rủi ro cao / không khả thi)
+5. Đề xuất các khuyến nghị (nếu có)
 
 Hãy trình bày câu trả lời một cách chuyên nghiệp, có cấu trúc rõ ràng với các đề mục cho từng phần.
 """

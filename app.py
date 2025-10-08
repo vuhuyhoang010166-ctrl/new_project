@@ -558,7 +558,8 @@ if st.session_state.project_data:
                     ai_service = get_ai_service(api_key)
                     if ai_service:
                         success, analysis_text, error_msg = ai_service.analyze_metrics(
-                            st.session_state.metrics
+                            st.session_state.metrics,
+                            st.session_state.project_data
                         )
                         if success:
                             st.session_state.ai_analysis_result = analysis_text

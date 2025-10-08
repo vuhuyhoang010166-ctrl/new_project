@@ -76,25 +76,40 @@ class GeminiAIService:
             return False, None, error_msg
 
     @st.cache_data(show_spinner=False, ttl=3600)
-    def analyze_metrics(_self, metrics: Dict[str, Any]) -> Tuple[bool, str, str]:
+    def analyze_metrics(_self, metrics: Dict[str, Any], project_data: Dict[str, Any]) -> Tuple[bool, str, str]:
         """
         Phân tích các chỉ số tài chính sử dụng AI
         Sử dụng cache để tránh gọi API lặp lại
 
         Args:
             metrics: Dictionary chứa các chỉ số tài chính
+            project_data: Dictionary chứa thông tin dự án
 
         Returns:
             Tuple[bool, str, str]: (success, analysis_text, error_message)
         """
         try:
-            # Format các giá trị cho prompt
+            # Format các giá trị cho prompt - Metrics
             npv = f"{metrics['NPV']:,.0f}"
             irr = f"{metrics['IRR']:.2f}%" if isinstance(metrics['IRR'], float) else metrics['IRR']
             pp = f"{metrics['PP']:.2f} năm" if isinstance(metrics['PP'], float) else metrics['PP']
             dpp = f"{metrics['DPP']:.2f} năm" if isinstance(metrics['DPP'], float) else metrics['DPP']
 
+            # Format các giá trị cho prompt - Project Data
+            von_dau_tu = f"{project_data.get('von_dau_tu', 0):,.0f}"
+            dong_doi = f"{project_data.get('dong_doi_du_an', 0)}"
+            doanh_thu = f"{project_data.get('doanh_thu_nam', 0):,.0f}"
+            chi_phi = f"{project_data.get('chi_phi_nam', 0):,.0f}"
+            wacc = f"{project_data.get('wacc', 0):.2f}"
+            thue_suat = f"{project_data.get('thue_suat', 0):.2f}"
+
             prompt = ANALYSIS_PROMPT_TEMPLATE.format(
+                von_dau_tu=von_dau_tu,
+                dong_doi=dong_doi,
+                doanh_thu=doanh_thu,
+                chi_phi=chi_phi,
+                wacc=wacc,
+                thue_suat=thue_suat,
                 npv=npv,
                 irr=irr,
                 pp=pp,
