@@ -52,7 +52,8 @@ def get_project_data_from_ai(text, api_key):
     """
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash-latest')
+        # *** ĐÃ SỬA: Thay đổi từ 'gemini-1.5-flash-latest' sang 'gemini-1.5-flash' ***
+        model = genai.GenerativeModel('gemini-1.5-flash')
 
         # Prompt được thiết kế kỹ lưỡng để yêu cầu AI trả về định dạng JSON,
         # giúp việc xử lý dữ liệu trở nên đáng tin cậy hơn.
@@ -186,7 +187,8 @@ def get_ai_analysis(metrics, api_key):
     """Gửi các chỉ số đã tính toán để AI đưa ra phân tích chuyên sâu."""
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash-latest')
+        # *** ĐÃ SỬA: Thay đổi từ 'gemini-1.5-flash-latest' sang 'gemini-1.5-flash' ***
+        model = genai.GenerativeModel('gemini-1.5-flash')
 
         prompt = f"""
         Với vai trò là một chuyên gia tư vấn đầu tư, hãy phân tích các chỉ số hiệu quả dự án dưới đây và đưa ra nhận định chuyên môn.
@@ -247,7 +249,6 @@ if uploaded_file is not None and api_key:
     if st.session_state.project_data:
         st.success("✅ AI đã trích xuất thành công dữ liệu!")
         with st.expander("Xem dữ liệu AI đã lọc", expanded=True):
-            # *** PHẦN ĐƯỢC SỬA LỖI VÀ CẢI TIẾN ***
             # Hiển thị dữ liệu đã trích xuất dưới dạng các metric để dễ nhìn hơn
             p_data = st.session_state.project_data
             metric_col1, metric_col2, metric_col3 = st.columns(3)
